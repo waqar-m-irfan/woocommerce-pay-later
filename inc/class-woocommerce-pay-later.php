@@ -20,7 +20,6 @@ class WooCommercePayLater
 
         //filters
         add_filter('woocommerce_payment_gateways', array(self::class, 'add_payment_gateway_class'));
-
     }
 
     #region - admin pages
