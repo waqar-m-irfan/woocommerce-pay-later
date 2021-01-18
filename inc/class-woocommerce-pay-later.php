@@ -51,8 +51,29 @@ class WooCommercePayLater
 
     public static function add_payment_gateway_class($gateways)
     {
+        global $woocommerce;
+
+        $items = $woocommerce->cart->get_cart();
+        $items_meta = [];
+
+        // If customer is approved for Pay Later AND all of the items in cart are also approved for Pay Later THEN show pay later as an option during checkout
+        $user_id = get_current_user_id();
+
+        $user_meta = strtolower(get_user_meta($user_id, 'pay_later_status', true));
+        if ($user_meta == 'approved') {
+            foreach ($items as $cart_item) {
+                $product_id = $cart_item['product_id'];
+                $items_meta[] = strtolower(get_post_meta($product_id, '_pay_later_status', true));
+            }
+
+            // If any of the items in cart are not approved for Pay Later, but customer is approved, don't show Pay Later
+            if (!in_array('not approved', $items_meta)) {
+                $gateways[] = 'WooCommercePayLaterGateway';
+            }
+        }
+
+        // If customer is not approved then don't show Pay Later regardless if any or all products in cart are approved
         // return our custom payment gateway class with other gatways with the help of filter
-        $gateways[] = 'WooCommercePayLaterGateway';
         return $gateways;
     }
 
