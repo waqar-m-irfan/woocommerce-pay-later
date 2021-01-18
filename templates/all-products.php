@@ -129,7 +129,7 @@
                 $sql = "SELECT * FROM {$wpdb->prefix}posts WHERE post_type = 'product'";
 
                 if (!empty($search_term)) {
-                    $sql .= " AND post_title LIKE '%" . $search_term . "%'";
+                    $sql .= " AND post_title LIKE '%" . esc_attr($search_term) . "%'";
                 } else {
                     if ($orderby == 'name' && $order == 'asc') {
                         $sql .= " ORDER BY post_title ASC";

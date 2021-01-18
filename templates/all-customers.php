@@ -13,6 +13,7 @@
                     'cb' => ' < input type = "checkbox" />',
                     'name' => __('Name', 'sp'),
                     'email' => __('Email', 'sp'),
+                    'role' => __('Role', 'sp'),
                     'pay_later_status' => __('Pay Later', 'sp'),
                     'action' => __('Action', 'sp'),
                 ];
@@ -25,7 +26,8 @@
                 switch ($column_name) {
                     case 'name':
                     case 'email':
-                        return $item[$column_name];
+                    case 'role':
+                        return ucfirst($item[$column_name]);
 
                     case 'pay_later_status':
                         $pay_later_status = $item['pay_later_status'];
@@ -123,31 +125,33 @@
 
             public function get_customers($orderby = '', $order = '', $search_term = '')
             {
+                global $wpdb;
                 $all_users = [];
-                $args = array(
-                    'role' => 'customer',
-                );
+
+                $sql = "SELECT * FROM {$wpdb->prefix}users";
+
                 if (!empty($search_term)) {
-                    $args['search'] = '*' . esc_attr($search_term) . '*';
+                    $sql .= " WHERE display_name LIKE '%" . esc_attr($search_term) . "%'";
                 } else {
                     if ($orderby == 'name' && $order == 'asc') {
-                        $args['orderby'] = 'user_display_name';
-                        $args['order'] = 'ASC';
+                        $sql .= " ORDER BY display_name ASC";
                     } elseif ($orderby == 'name' && $order == 'desc') {
-                        $args['orderby'] = 'user_display_name';
-                        $args['order'] = 'DESC';
+                        $sql .= " ORDER BY display_name DESC";
                     }
                 }
 
-                $users = get_users($args);
+                $users = $wpdb->get_results($sql);
 
                 foreach ($users as $user) {
                     $pay_later_status = get_user_meta($user->ID, 'pay_later_status', true);
+                    $wp_capabilities = get_user_meta($user->ID, 'wp_capabilities', true);
+                    $user_role = array_keys($wp_capabilities);
 
                     $all_users[] = [
                         'ID' => $user->ID,
                         'name' => $user->display_name,
                         'email' => $user->user_email,
+                        'role' => $user_role[0],
                         'pay_later_status' => $pay_later_status
                     ];
                 }
@@ -181,7 +185,7 @@
         {
             if (isset($_POST['edit-row'])) {
                 $pay_later_status = get_user_meta($_POST['edit-row'], 'pay_later_status', true);
-                if(strtolower($pay_later_status) == 'not approved') {
+                if (strtolower($pay_later_status) == 'not approved') {
                     update_user_meta($_POST['edit-row'], 'pay_later_status', 'Approved', '');
                 } else {
                     update_user_meta($_POST['edit-row'], 'pay_later_status', 'Not Approved', '');
