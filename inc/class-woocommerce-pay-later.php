@@ -20,6 +20,7 @@ class WooCommercePayLater
 
         //filters
         add_filter('woocommerce_payment_gateways', array(self::class, 'add_payment_gateway_class'));
+        add_filter('woocommerce_available_payment_gateways', array(self::class, 'conditional_hiding_payment_gateway'));
     }
 
     #region - admin pages
@@ -51,6 +52,12 @@ class WooCommercePayLater
 
     public static function add_payment_gateway_class($gateways)
     {
+        $gateways[] = 'WooCommercePayLaterGateway';
+        return $gateways;
+    }
+
+    public static function conditional_hiding_payment_gateway($available_gateways)
+    {
         global $woocommerce;
 
         $items = $woocommerce->cart->get_cart();
@@ -60,6 +67,7 @@ class WooCommercePayLater
         $user_id = get_current_user_id();
 
         $user_meta = strtolower(get_user_meta($user_id, 'pay_later_status', true));
+
         if ($user_meta == 'approved') {
             foreach ($items as $cart_item) {
                 $product_id = $cart_item['product_id'];
@@ -67,14 +75,16 @@ class WooCommercePayLater
             }
 
             // If any of the items in cart are not approved for Pay Later, but customer is approved, don't show Pay Later
-            if (!in_array('not approved', $items_meta)) {
-                $gateways[] = 'WooCommercePayLaterGateway';
+            if (in_array('not approved', $items_meta)) {
+                unset($available_gateways['paylater']);
             }
+        } else {
+            unset($available_gateways['paylater']);
         }
 
         // If customer is not approved then don't show Pay Later regardless if any or all products in cart are approved
         // return our custom payment gateway class with other gatways with the help of filter
-        return $gateways;
+        return $available_gateways;
     }
 
     public static function init_payment_gateway_class()
